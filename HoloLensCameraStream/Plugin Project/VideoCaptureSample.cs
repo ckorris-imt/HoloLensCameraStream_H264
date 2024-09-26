@@ -244,7 +244,7 @@ namespace HoloLensCameraStream
         /// </summary>
         public void Dispose()
         {
-            bitmap.Dispose();
+            bitmap?.Dispose();
             frameReference.Dispose();
         }
 

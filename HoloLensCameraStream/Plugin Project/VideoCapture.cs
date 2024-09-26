@@ -216,7 +216,7 @@ namespace HoloLensCameraStream
                 return;
             }
 
-            MediaFrameSourceInfo selectedFrameSourceInfo = selectedFrameSourceGroup.SourceInfos.FirstOrDefault(); //Returns a MediaFrameSourceInfo
+            var selectedFrameSourceInfo = selectedFrameSourceGroup.SourceInfos.FirstOrDefault(); //Returns a MediaFrameSourceInfo
 
 
             if (selectedFrameSourceInfo == null)
@@ -341,23 +341,14 @@ namespace HoloLensCameraStream
             }
             */
 
-            if (!_mediaCapture.FrameSources.TryGetValue(_frameSourceInfo.Id, out var value))
-            {
-                value = _mediaCapture.FrameSources.FirstOrDefault().Value;
-            }
-
             var pixelFormat = ConvertCapturePixelFormatToMediaEncodingSubtype(setupParams.pixelFormat);
-            //_frameReader = await _mediaCapture.CreateFrameReaderAsync(mediaFrameSource, pixelFormat);
-            _frameReader = await _mediaCapture.CreateFrameReaderAsync(value, pixelFormat);
-            //_frameReader = await _mediaCapture.CreateFrameReaderAsync(value, null);
+            _frameReader = await _mediaCapture.CreateFrameReaderAsync(mediaFrameSource, pixelFormat);
             _frameReader.FrameArrived += HandleFrameArrived;
             await _frameReader.StartAsync();
 
             onVideoModeStartedCallback?.Invoke(new VideoCaptureResult(0, ResultType.Success, true));
         }
 
-        //Making sure nothing's using this.
-        /*
         /// <summary>
         /// Returns a new VideoFrameSample as soon as the next one is available.
         /// This method is preferable to listening to the FrameSampleAcquired event
@@ -399,7 +390,6 @@ namespace HoloLensCameraStream
             };
             _frameReader.FrameArrived += handler;
         }
-        */
 
         /// <summary>
         /// Asynchronously stops video mode.
@@ -470,8 +460,6 @@ namespace HoloLensCameraStream
                 IReadOnlyList<MediaCaptureVideoProfile> profileList = MediaCapture.FindKnownVideoProfiles(deviceId, KnownVideoProfile.VideoConferencing);
 
                 // Initialize mediacapture with the source group.
-                //TEST use old settings.
-                
                 var settings = new MediaCaptureInitializationSettings
                 {
                     VideoDeviceId = deviceId,
@@ -480,21 +468,11 @@ namespace HoloLensCameraStream
                     SharingMode = MediaCaptureSharingMode.ExclusiveControl,
                     // Only stream video and don't initialize audio capture devices.
                     StreamingCaptureMode = StreamingCaptureMode.Video,
-                    //Unlike the source, this fork will use GPU memory if possible.
-                    MemoryPreference = MediaCaptureMemoryPreference.Auto
+                    // Set to CPU to ensure frames always contain CPU SoftwareBitmap images
+                    // instead of preferring GPU D3DSurface images.
                     //MemoryPreference = MediaCaptureMemoryPreference.Cpu
+                    MemoryPreference = MediaCaptureMemoryPreference.Auto
                 };
-                /*
-                var settings = new MediaCaptureInitializationSettings
-                {
-                    VideoDeviceId = _deviceInfo.Id,
-                    SourceGroup = _frameSourceGroup,
-                    MemoryPreference = MediaCaptureMemoryPreference.Auto,
-                    //MemoryPreference = MediaCaptureMemoryPreference.Cpu,
-                    StreamingCaptureMode = StreamingCaptureMode.Video,
-                    SharingMode = MediaCaptureSharingMode.ExclusiveControl
-                };
-                */
                 await _mediaCapture.InitializeAsync(settings);
             }
 
@@ -526,8 +504,6 @@ namespace HoloLensCameraStream
                 return;
             }
 
-
-            /*
             using (var frameReference = _frameReader.TryAcquireLatestFrame()) //frameReference is a MediaFrameReference
             {
                 if (frameReference != null)
@@ -536,11 +512,6 @@ namespace HoloLensCameraStream
                     FrameSampleAcquired?.Invoke(sample);
                 }
             }
-            */
-
-            MediaFrameReference frameReference = _frameReader.TryAcquireLatestFrame();
-            VideoCaptureSample videoCaptureSample = new VideoCaptureSample(frameReference, worldOrigin);
-            this.FrameSampleAcquired?.Invoke(videoCaptureSample);
         }
 
         VideoEncodingProperties GetVideoEncodingPropertiesForCameraParams(CameraParameters cameraParams)
