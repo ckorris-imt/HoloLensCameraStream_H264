@@ -1,4 +1,4 @@
-﻿//  
+//  
 // Copyright (c) 2017 Vulcan, Inc. All rights reserved.  
 // Licensed under the Apache 2.0 license. See LICENSE file in the project root for full license information.
 //
@@ -467,9 +467,8 @@ namespace HoloLensCameraStream
                     SharingMode = MediaCaptureSharingMode.ExclusiveControl,
                     // Only stream video and don't initialize audio capture devices.
                     StreamingCaptureMode = StreamingCaptureMode.Video,
-                    // Set to CPU to ensure frames always contain CPU SoftwareBitmap images
-                    // instead of preferring GPU D3DSurface images.
-                    MemoryPreference = MediaCaptureMemoryPreference.Cpu
+                    //Unlike the source, this fork will use GPU memory if possible.
+                    MemoryPreference = MediaCaptureMemoryPreference.Auto
                 };
                 await _mediaCapture.InitializeAsync(settings);
             }

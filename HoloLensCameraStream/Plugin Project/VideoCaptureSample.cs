@@ -12,6 +12,7 @@ using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Perception.Spatial;
 using Windows.Graphics.Imaging;
 using Windows.Media.Capture.Frames;
+using Windows.Graphics.DirectX.Direct3D11;
 
 namespace HoloLensCameraStream
 {
@@ -50,6 +51,8 @@ namespace HoloLensCameraStream
                 throw new NotImplementedException();
             }
         }
+
+        internal IDirect3DSurface d3dSurface;
 
         /// <summary>
         /// The format of the frames that the bitmap stream is sending.
@@ -99,6 +102,7 @@ namespace HoloLensCameraStream
             this.worldOrigin = worldOrigin;
 
             bitmap = frameReference.VideoMediaFrame.SoftwareBitmap;
+            d3dSurface = frameReference.VideoMediaFrame.Direct3DSurface;
             pixelFormat = ConvertBitmapPixelFormatToCapturePixelFormat(bitmap.BitmapPixelFormat);
             FrameWidth = bitmap.PixelWidth;
             FrameHeight = bitmap.PixelHeight;
@@ -134,6 +138,12 @@ namespace HoloLensCameraStream
         public void CopyRawImageDataIntoBuffer(List<byte> byteBuffer)
         {
             throw new NotSupportedException("This method is not yet supported with a List<byte>. Please provide a byte[] instead.");
+        }
+
+        public bool GetIDirect3DSurfaceAsObject(out object d3dAsObject)
+        {
+            d3dAsObject = d3dSurface;
+            return d3dSurface != null;
         }
 
         /// <summary>
