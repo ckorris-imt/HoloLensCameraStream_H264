@@ -1,4 +1,4 @@
-﻿//  
+//  
 // Copyright (c) 2017 Vulcan, Inc. All rights reserved.  
 // Licensed under the Apache 2.0 license. See LICENSE file in the project root for full license information.
 //
@@ -18,6 +18,7 @@ using Windows.Perception.Spatial;
 using Windows.Foundation.Collections;
 using Windows.Foundation;
 using System.Diagnostics;
+using Windows.Storage.Streams;
 
 
 namespace HoloLensCameraStream
@@ -341,8 +342,26 @@ namespace HoloLensCameraStream
             }
             */
 
+            IReadOnlyList<MediaFrameFormat> supportedFormats = mediaFrameSource.SupportedFormats;
+            MediaFrameFormat h264Format = supportedFormats.FirstOrDefault(format =>
+                format.Subtype == MediaEncodingSubtypes.H264);
+
+            if (h264Format == null)
+            {
+                throw new Exception("H.264 format not supported by this MediaFrameSource.");
+            }
+
+            await mediaFrameSource.SetFormatAsync(h264Format);
+
+            var frameReader = await _mediaCapture.CreateFrameReaderAsync(mediaFrameSource);
+
+
+            /*
             var pixelFormat = ConvertCapturePixelFormatToMediaEncodingSubtype(setupParams.pixelFormat);
             _frameReader = await _mediaCapture.CreateFrameReaderAsync(mediaFrameSource, pixelFormat);
+            */
+
+
             _frameReader.FrameArrived += HandleFrameArrived;
             await _frameReader.StartAsync();
 
@@ -448,7 +467,10 @@ namespace HoloLensCameraStream
                     StreamingCaptureMode = StreamingCaptureMode.Video,
                     // Set to CPU to ensure frames always contain CPU SoftwareBitmap images
                     // instead of preferring GPU D3DSurface images.
-                    MemoryPreference = MediaCaptureMemoryPreference.Cpu
+                    MemoryPreference = MediaCaptureMemoryPreference.Cpu,
+
+                    //Adding for low-ish-latency H264
+                    MediaCategory = MediaCategory.Communications
                 };
                 await _mediaCapture.InitializeAsync(settings);
             }
@@ -456,25 +478,52 @@ namespace HoloLensCameraStream
             {
                 string deviceId = _frameSourceGroup.Id;
                 // Look up for all video profiles
-                IReadOnlyList<MediaCaptureVideoProfile> profileList = MediaCapture.FindKnownVideoProfiles(deviceId, KnownVideoProfile.VideoConferencing);
+                //IReadOnlyList<MediaCaptureVideoProfile> profileList = MediaCapture.FindKnownVideoProfiles(deviceId, KnownVideoProfile.);
 
                 // Initialize mediacapture with the source group.
                 var settings = new MediaCaptureInitializationSettings
                 {
                     VideoDeviceId = deviceId,
-                    VideoProfile = profileList[0],
+
                     // This media capture can share streaming with other apps.
                     SharingMode = MediaCaptureSharingMode.ExclusiveControl,
                     // Only stream video and don't initialize audio capture devices.
                     StreamingCaptureMode = StreamingCaptureMode.Video,
                     // Set to CPU to ensure frames always contain CPU SoftwareBitmap images
                     // instead of preferring GPU D3DSurface images.
-                    MemoryPreference = MediaCaptureMemoryPreference.Cpu
+                    MemoryPreference = MediaCaptureMemoryPreference.Cpu,
+
+                    //Adding for low-ish-latency H264
+                    //VideoProfile = profileList[0], //Was higher up before.
+                    VideoProfile = GetVideoProfileWithH264Async(deviceId),
+                    MediaCategory = MediaCategory.Communications
+                    //PreviewMediaDescription = GetMediaDescriptionForH264()
+
                 };
                 await _mediaCapture.InitializeAsync(settings);
             }
 
             _mediaCapture.VideoDeviceController.Focus.TrySetAuto(true);
+        }
+
+        private MediaCaptureVideoProfile GetVideoProfileWithH264Async(string videoDeviceID)
+        {
+            // Query the available video profiles on the device
+            var allProfiles = MediaCapture.FindKnownVideoProfiles(videoDeviceID, KnownVideoProfile.VideoConferencing);
+
+            // Iterate over the profiles and select one that supports H.264
+            foreach (var profile in allProfiles)
+            {
+                var descriptions = profile.SupportedRecordMediaDescription;
+
+                // Look for a profile that supports H.264 encoding
+                if (descriptions.Any(desc => desc.Subtype == MediaEncodingSubtypes.H264))
+                {
+                    return profile;
+                }
+            }
+
+            throw new InvalidOperationException("No H.264-supported video profiles found.");
         }
 
         private Task SetFrameType(MediaFrameSource frameSource, int width, int height, int framerate)
@@ -502,13 +551,41 @@ namespace HoloLensCameraStream
                 return;
             }
 
-            using (var frameReference = _frameReader.TryAcquireLatestFrame()) //frameReference is a MediaFrameReference
+            using (MediaFrameReference frameReference = _frameReader.TryAcquireLatestFrame()) //frameReference is a MediaFrameReference
             {
-                if (frameReference != null)
+                if (frameReference == null)
                 {
-                    var sample = new VideoCaptureSample(frameReference, worldOrigin);
-                    FrameSampleAcquired?.Invoke(sample);
+                    Debug.WriteLine("frameReference is null.");
+                    
+                    return;
                 }
+
+                /*
+                var compressedFrame = frameReference.CompressedMediaFrame;
+
+                //Debug.WriteLine("CompressedMediaFrame is null.");
+
+                // Get the compressed buffer containing H.264 data
+                var buffer = compressedFrame.GetDetachableCompressedBuffer();
+
+                // Read the bytes from the buffer
+                using (var dataReader = DataReader.FromBuffer(buffer))
+                {
+                    byte[] h264Bytes = new byte[buffer.Length];
+                    dataReader.ReadBytes(h264Bytes);
+
+                    // Process the H.264 bytes as needed
+                    ProcessH264Data(h264Bytes);
+                }
+
+                // Access other data from MediaFrameReference
+                var timestamp = frameReference.SystemRelativeTime;
+                var properties = frameReference.Properties;
+                */
+
+
+                var sample = new VideoCaptureSample(frameReference, worldOrigin);
+                FrameSampleAcquired?.Invoke(sample);
             }
         }
 
