@@ -103,9 +103,19 @@ namespace HoloLensCameraStream
 
             bitmap = frameReference.VideoMediaFrame.SoftwareBitmap;
             d3dSurface = frameReference.VideoMediaFrame.Direct3DSurface;
-            pixelFormat = ConvertBitmapPixelFormatToCapturePixelFormat(bitmap.BitmapPixelFormat);
-            FrameWidth = bitmap.PixelWidth;
-            FrameHeight = bitmap.PixelHeight;
+
+            if (bitmap != null)
+            {
+                pixelFormat = ConvertBitmapPixelFormatToCapturePixelFormat(bitmap.BitmapPixelFormat);
+                FrameWidth = bitmap.PixelWidth;
+                FrameHeight = bitmap.PixelHeight;
+            }
+            else
+            {
+                FrameWidth = d3dSurface.Description.Width;
+                FrameHeight = d3dSurface.Description.Height;
+                pixelFormat = CapturePixelFormat.Unknown; //TODO: Fix later.
+            }
         }
 
         /// <summary>
