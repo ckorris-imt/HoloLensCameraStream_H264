@@ -5,7 +5,6 @@
 
 using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Numerics;
 using System.Runtime.InteropServices.WindowsRuntime;
 
@@ -16,7 +15,7 @@ using Windows.Graphics.DirectX.Direct3D11;
 
 namespace HoloLensCameraStream
 {
-    public class VideoCaptureSample
+    public class VideoCaptureSample : IDisposable
     {
         /// <summary>
         /// How many bytes are in the frame.
@@ -79,6 +78,8 @@ namespace HoloLensCameraStream
         public int FrameWidth { get; private set; }
         public int FrameHeight { get; private set; }
 
+        public TimeSpan FrameTime { get; private set; }
+
         //Internal members
 
         internal SpatialCoordinateSystem worldOrigin { get; private set; }
@@ -100,6 +101,7 @@ namespace HoloLensCameraStream
 
             this.frameReference = frameReference;
             this.worldOrigin = worldOrigin;
+            FrameTime = frameReference.SystemRelativeTime.Value;
 
             bitmap = frameReference.VideoMediaFrame.SoftwareBitmap;
             d3dSurface = frameReference.VideoMediaFrame.Direct3DSurface;

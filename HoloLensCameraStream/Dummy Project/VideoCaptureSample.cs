@@ -8,7 +8,7 @@ using System.Collections.Generic;
 
 namespace HoloLensCameraStream
 {
-    public class VideoCaptureSample
+    public class VideoCaptureSample : IDisposable
     {
         public int dataLength { get; private set; }
 
@@ -21,6 +21,8 @@ namespace HoloLensCameraStream
         public int FrameWidth { get; private set; }
 
         public int FrameHeight { get; private set; }
+
+        public TimeSpan FrameTime { get; private set; }
 
         public void CopyRawImageDataIntoBuffer(byte[] byteBuffer)
         {

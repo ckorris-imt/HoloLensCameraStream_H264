@@ -436,45 +436,23 @@ namespace HoloLensCameraStream
 
             // from https://github.com/qian256/HoloLensARToolKit/blob/bef36a89f191ab7d389d977c46639376069bbed6/HoloLensARToolKit/Assets/ARToolKitUWP/Scripts/ARUWPVideo.cs#L301
             _mediaCapture = new MediaCapture();
-            if (_hololensDeviceType == HololensDeviceType.Hololens1 || _hololensDeviceType == HololensDeviceType.Unknown)
-            {
-                var settings = new MediaCaptureInitializationSettings
-                {
-                    SourceGroup = _frameSourceGroup,
-                    // This media capture can share streaming with other apps.
-                    SharingMode = MediaCaptureSharingMode.SharedReadOnly,
-                    //SharingMode = _sharedStream ? MediaCaptureSharingMode.SharedReadOnly : MediaCaptureSharingMode.ExclusiveControl, // using  AddVideoEffect and VideoEncodingProperties
-                    // Only stream video and don't initialize audio capture devices.
-                    StreamingCaptureMode = StreamingCaptureMode.Video,
-                    // Set to CPU to ensure frames always contain CPU SoftwareBitmap images
-                    // instead of preferring GPU D3DSurface images.
-                    //MemoryPreference = MediaCaptureMemoryPreference.Cpu
-                    MemoryPreference = MediaCaptureMemoryPreference.Auto
-                };
-                await _mediaCapture.InitializeAsync(settings);
-            }
-            else if (_hololensDeviceType == HololensDeviceType.Hololens2)
-            {
-                string deviceId = _frameSourceGroup.Id;
-                // Look up for all video profiles
-                IReadOnlyList<MediaCaptureVideoProfile> profileList = MediaCapture.FindKnownVideoProfiles(deviceId, KnownVideoProfile.VideoConferencing);
 
-                // Initialize mediacapture with the source group.
-                var settings = new MediaCaptureInitializationSettings
-                {
-                    VideoDeviceId = deviceId,
-                    VideoProfile = profileList[0],
-                    // This media capture can share streaming with other apps.
-                    SharingMode = MediaCaptureSharingMode.ExclusiveControl,
-                    // Only stream video and don't initialize audio capture devices.
-                    StreamingCaptureMode = StreamingCaptureMode.Video,
-                    // Set to CPU to ensure frames always contain CPU SoftwareBitmap images
-                    // instead of preferring GPU D3DSurface images.
-                    //MemoryPreference = MediaCaptureMemoryPreference.Cpu
-                    MemoryPreference = MediaCaptureMemoryPreference.Auto
-                };
-                await _mediaCapture.InitializeAsync(settings);
-            }
+            string deviceId = _frameSourceGroup.Id;
+            // Look up for all video profiles
+            IReadOnlyList<MediaCaptureVideoProfile> profileList 
+                = MediaCapture.FindKnownVideoProfiles(deviceId, KnownVideoProfile.BalancedVideoAndPhoto);
+
+            // Initialize mediacapture with the source group.
+            var settings = new MediaCaptureInitializationSettings
+            {
+                VideoDeviceId = deviceId,
+                SourceGroup = _frameSourceGroup,
+                MemoryPreference = MediaCaptureMemoryPreference.Auto,
+                StreamingCaptureMode = StreamingCaptureMode.Video,
+                SharingMode = MediaCaptureSharingMode.ExclusiveControl,
+                VideoProfile = profileList[0]
+            };
+            await _mediaCapture.InitializeAsync(settings);
 
             _mediaCapture.VideoDeviceController.Focus.TrySetAuto(true);
         }
