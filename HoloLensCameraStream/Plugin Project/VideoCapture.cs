@@ -156,6 +156,7 @@ namespace HoloLensCameraStream
         MediaFrameSourceInfo _frameSourceInfo;
         DeviceInformation _deviceInfo;
         MediaCapture _mediaCapture;
+        MediaCaptureVideoProfile _videoProfile;
         MediaFrameReader _frameReader;
 
         VideoCapture(MediaFrameSourceGroup frameSourceGroup, MediaFrameSourceInfo frameSourceInfo, DeviceInformation deviceInfo)
@@ -438,11 +439,13 @@ namespace HoloLensCameraStream
             _mediaCapture = new MediaCapture();
 
             string deviceId = _frameSourceGroup.Id;
-            // Look up for all video profiles
-            IReadOnlyList<MediaCaptureVideoProfile> profileList 
-                = MediaCapture.FindKnownVideoProfiles(deviceId, KnownVideoProfile.BalancedVideoAndPhoto);
 
-            // Initialize mediacapture with the source group.
+            //Balanced resolutions are supported by the "BalancedVideoAndPhoto, 120" profile. See:
+            //https://learn.microsoft.com/en-us/windows/mixed-reality/develop/advanced-concepts/locatable-camera-overview
+            IReadOnlyList<MediaCaptureVideoProfile> profileList
+                = MediaCapture.FindKnownVideoProfiles(deviceId, KnownVideoProfile.BalancedVideoAndPhoto);
+            _videoProfile = profileList.FirstOrDefault(profile => profile.Id.EndsWith(",120")); //Should be index 2.
+
             var settings = new MediaCaptureInitializationSettings
             {
                 VideoDeviceId = deviceId,
@@ -450,7 +453,7 @@ namespace HoloLensCameraStream
                 MemoryPreference = MediaCaptureMemoryPreference.Auto,
                 StreamingCaptureMode = StreamingCaptureMode.Video,
                 SharingMode = MediaCaptureSharingMode.ExclusiveControl,
-                VideoProfile = profileList[0]
+                VideoProfile = _videoProfile
             };
             await _mediaCapture.InitializeAsync(settings);
 
