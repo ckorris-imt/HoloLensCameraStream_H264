@@ -485,14 +485,18 @@ namespace HoloLensCameraStream
                 return;
             }
 
-            using (var frameReference = _frameReader.TryAcquireLatestFrame()) //frameReference is a MediaFrameReference
+            //using (var frameReference = _frameReader.TryAcquireLatestFrame()) //frameReference is a MediaFrameReference
+            MediaFrameReference frameReference = _frameReader.TryAcquireLatestFrame();
+            if (frameReference != null)
             {
-                if (frameReference != null)
-                {
-                    var sample = new VideoCaptureSample(frameReference, worldOrigin);
-                    FrameSampleAcquired?.Invoke(sample);
-                }
+                var sample = new VideoCaptureSample(frameReference, worldOrigin);
+                FrameSampleAcquired?.Invoke(sample);
             }
+            else
+            {
+                Debug.WriteLine("~HandleFrameArrived called with null frame.");
+            }
+
         }
 
         VideoEncodingProperties GetVideoEncodingPropertiesForCameraParams(CameraParameters cameraParams)
